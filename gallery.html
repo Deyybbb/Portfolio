@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photography — Dave Torralba</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,700;1,9..40,300&family=Playfair+Display:ital,wght@1,400;1,700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#0A0F1E;--navy2:#0D1528;--navy3:#111D3A;
+  --blue:#1A3A6B;--accent:#4A90D9;--sky:#7BB8F0;
+  --cream:#E8EEF8;--ash:#8A9AB8;--white:#FFFFFF;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--cream);cursor:none;overflow-x:hidden}
+
+/* ── Cursor ── */
+.cursor{position:fixed;top:0;left:0;width:8px;height:8px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%)}
+.cursor-ring{position:fixed;top:0;left:0;width:36px;height:36px;border:1px solid rgba(74,144,217,.5);border-radius:50%;pointer-events:none;z-index:99998;transition:width .3s,height .3s,border-color .3s;transform:translate(-50%,-50%)}
+.cursor-ring.expanded{width:64px;height:64px;border-color:var(--accent)}
+
+/* ── Page loader ── */
+#page-loader{
+  position:fixed;inset:0;background:var(--navy);z-index:9000;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:32px;
+  transition:opacity .6s ease;
+}
+#page-loader.hide{opacity:0;pointer-events:none}
+.loader-logo{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--white);letter-spacing:.12em}
+.loader-logo span{color:var(--accent)}
+.loader-bar-wrap{width:200px;height:2px;background:rgba(74,144,217,.15);overflow:hidden}
+.loader-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--sky));width:0%;transition:width .04s linear}
+
+/* ── Nav ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:500;padding:24px 80px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(to bottom,rgba(10,15,30,.97),transparent);
+  border-bottom:1px solid transparent;transition:background .3s,border-color .3s;
+}
+nav.scrolled{background:rgba(10,15,30,.97);backdrop-filter:blur(16px);border-bottom-color:rgba(74,144,217,.12)}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--white);letter-spacing:.08em;text-decoration:none}
+.nav-logo span{color:var(--accent)}
+.nav-right{display:flex;align-items:center;gap:40px}
+.nav-back{font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--ash);text-decoration:none;transition:color .3s;cursor:none;display:flex;align-items:center;gap:8px}
+.nav-back:hover{color:var(--white)}
+.nav-back svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* ── Hero banner ── */
+.gallery-hero{
+  min-height:52vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  padding:0 80px 72px;position:relative;overflow:hidden;
+  background:linear-gradient(160deg,var(--navy) 0%,var(--navy2) 60%,var(--navy3) 100%);
+}
+.gallery-hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 80%,rgba(74,144,217,.07) 0%,transparent 70%),
+             repeating-linear-gradient(0deg,transparent,transparent 80px,rgba(74,144,217,.02) 80px,rgba(74,144,217,.02) 81px),
+             repeating-linear-gradient(90deg,transparent,transparent 80px,rgba(74,144,217,.02) 80px,rgba(74,144,217,.02) 81px);
+}
+.gallery-eyebrow{
+  font-size:11px;letter-spacing:.45em;color:var(--accent);text-transform:uppercase;
+  margin-bottom:20px;position:relative;z-index:1;
+  display:flex;align-items:center;gap:16px;
+}
+.gallery-eyebrow::before,.gallery-eyebrow::after{content:'';width:40px;height:1px;background:rgba(74,144,217,.5)}
+.gallery-title{
+  font-family:'Bebas Neue',sans-serif;font-size:clamp(80px,12vw,160px);line-height:.9;
+  color:var(--white);position:relative;z-index:1;text-align:center;letter-spacing:.02em;
+}
+.gallery-title span{color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.35)}
+.gallery-sub{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:clamp(16px,2vw,22px);color:var(--sky);margin-top:24px;
+  position:relative;z-index:1;text-align:center;
+}
+
+.photo-placeholder-gal .gallery-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  filter: brightness(0.7) saturate(0.9); 
+  transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.4s ease;
+}
+
+.photo-placeholder-gal svg,
+.photo-placeholder-gal .ph-label {
+  position: relative;
+  z-index: 2;
+  stroke: rgba(255, 255, 255, 0.9);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+.photo-placeholder-gal .ph-num {
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.15); 
+}
+
+.photo-card:hover .gallery-img {
+  filter: brightness(1) saturate(1.05);
+  transform: scale(1.04);
+}
+
+/* ── Filter bar ── */
+.filter-bar{
+  display:flex;align-items:center;gap:12px;padding:40px 80px 0;flex-wrap:wrap;
+  position:sticky;top:73px;z-index:200;
+  background:linear-gradient(to bottom,var(--navy) 80%,transparent);
+  padding-bottom:24px;
+}
+.filter-btn{
+  padding:8px 22px;border:1px solid rgba(74,144,217,.25);border-radius:30px;
+  font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ash);
+  background:transparent;cursor:none;transition:all .25s;font-family:'DM Sans',sans-serif;
+}
+.filter-btn:hover{color:var(--white);border-color:rgba(74,144,217,.6)}
+.filter-btn.active{background:var(--accent);color:var(--white);border-color:var(--accent)}
+.filter-count{
+  margin-left:auto;font-size:12px;color:var(--ash);letter-spacing:.1em;
+  font-style:italic;
+}
+
+/* ── Masonry / Photo grid ── */
+.gallery-wrap{padding:40px 80px 120px;columns:3;column-gap:16px}
+@media(max-width:1100px){.gallery-wrap{columns:2}}
+@media(max-width:640px){.gallery-wrap{columns:1;padding:24px 24px 80px}}
+
+.photo-card{
+  break-inside:avoid;margin-bottom:16px;position:relative;overflow:hidden;
+  cursor:none;display:block;
+  background:var(--navy3);border:1px solid rgba(74,144,217,.08);
+  transition:border-color .3s,transform .4s cubic-bezier(.25,.8,.25,1);
+  transform:translateY(0);
+}
+.photo-card:hover{border-color:rgba(74,144,217,.4);transform:translateY(-4px)}
+.photo-card.hidden{display:none}
+
+.photo-card img{
+  width:100%;display:block;object-fit:cover;
+  transition:transform .6s cubic-bezier(.25,.8,.25,1),filter .4s ease;
+  filter:brightness(.95) saturate(.95);
+}
+.photo-card:hover img{transform:scale(1.04);filter:brightness(1.05) saturate(1.1)}
+
+.photo-placeholder-gal{
+  width:100%;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;background:var(--navy3);
+  position:relative;overflow:hidden;
+}
+.photo-placeholder-gal::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(74,144,217,.04) 0%,rgba(26,58,107,.2) 100%);
+}
+.photo-placeholder-gal svg{width:36px;height:36px;stroke:rgba(74,144,217,.3);fill:none;stroke-width:1;position:relative;z-index:1}
+.photo-placeholder-gal .ph-label{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,255,255,.8);position:relative;z-index:1;text-shadow: 0 1px 3px rgba(0,0,0,0.8);}
+.photo-placeholder-gal .ph-num{
+  position:absolute;top:16px;left:20px;font-family:'Bebas Neue',sans-serif;
+  font-size:48px;color:rgba(255,255,255,.3);line-height:1;z-index:0;
+}
+
+.card-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(10,15,30,.92) 0%,rgba(10,15,30,.2) 50%,transparent 100%);
+  opacity:0;transition:opacity .35s ease;display:flex;flex-direction:column;justify-content:flex-end;padding:24px;
+}
+.photo-card:hover .card-overlay{opacity:1}
+.card-cat{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--white);letter-spacing:.04em;line-height:1.1}
+.card-location{font-size:12px;color:var(--ash);margin-top:4px}
+
+/* ── Lightbox ── */
+#lightbox{
+  position:fixed;inset:0;z-index:8000;background:rgba(5,8,18,.97);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .4s ease;
+}
+#lightbox.open{opacity:1;pointer-events:all}
+.lb-inner{
+  position:relative;max-width:90vw;max-height:90vh;
+  display:flex;align-items:center;justify-content:center;
+}
+#lb-img{
+  max-width:85vw;max-height:85vh;object-fit:contain;
+  border:1px solid rgba(74,144,217,.15);
+  transition:opacity .3s ease;
+  display: none;
+}
+.lb-close{
+  position:absolute;top:-52px;right:0;width:40px;height:40px;
+  border:1px solid rgba(74,144,217,.3);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:none;
+  background:rgba(10,15,30,.8);transition:all .25s;
+}
+.lb-close:hover{background:var(--accent);border-color:var(--accent)}
+.lb-close svg{width:16px;height:16px;stroke:var(--white);fill:none;stroke-width:2}
+.lb-nav{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:48px;height:48px;border:1px solid rgba(74,144,217,.3);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:none;
+  background:rgba(10,15,30,.8);transition:all .25s;
+}
+.lb-nav:hover{background:var(--accent);border-color:var(--accent)}
+.lb-nav svg{width:18px;height:18px;stroke:var(--white);fill:none;stroke-width:2}
+.lb-prev{left:-68px}.lb-next{right:-68px}
+.lb-info{
+  position:absolute;bottom:-64px;left:0;right:0;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.lb-title{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--white);letter-spacing:.04em}
+.lb-cat{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent)}
+.lb-counter{font-size:12px;color:var(--ash)}
+
+/* ── Reveal ── */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s ease,transform .8s ease}
+.reveal.visible{opacity:1;transform:none}
+
+/* ── Footer ── */
+footer.gal-footer{
+  padding:40px 80px;display:flex;align-items:center;justify-content:space-between;
+  border-top:1px solid rgba(74,144,217,.1);
+}
+footer.gal-footer p{font-size:12px;letter-spacing:.1em;color:var(--ash)}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--white);letter-spacing:.1em}
+.footer-logo span{color:var(--accent)}
+@media(max-width:768px){
+  nav{padding:20px 24px}
+  .gallery-hero{padding:0 24px 60px}
+  .filter-bar{padding:32px 24px 20px}
+  footer.gal-footer{padding:32px 24px;flex-direction:column;gap:16px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<div id="page-loader">
+  <div class="loader-logo">DAVE<span>.</span>T</div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loaderBar"></div></div>
+</div>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav id="nav">
+  <a href="dave_torralba_portfolio_v4.html" class="nav-logo">DAVE<span>.</span>T</a>
+  <div class="nav-right">
+    <a href="portfolio.html#photography" class="nav-back">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back to Portfolio
+    </a>
+  </div>
+</nav>
+
+<div class="gallery-hero">
+  <div class="gallery-eyebrow">Visual Portfolio — Dave Torralba</div>
+  <h1 class="gallery-title">PHOTO<span>GRAPHY</span></h1>
+  <p class="gallery-sub">Every frame is a deliberate choice — light, shadow, emotion and timing.</p>
+</div>
+
+<div class="filter-bar">
+  <button class="filter-btn active" data-filter="all" onclick="filterGallery('all')">All</button>
+  <button class="filter-btn" data-filter="landscape" onclick="filterGallery('landscape')">Landscape Nature</button>
+  <button class="filter-btn" data-filter="astro" onclick="filterGallery('astro')">Astro</button>
+  <button class="filter-btn" data-filter="wedding" onclick="filterGallery('wedding')">Wedding</button>
+  <button class="filter-btn" data-filter="concert" onclick="filterGallery('concert')">Concert</button>
+  <button class="filter-btn" data-filter="commercial" onclick="filterGallery('commercial')">Commercial</button>
+  <button class="filter-btn" data-filter="street" onclick="filterGallery('street')">Street</button>
+  <button class="filter-btn" data-filter="aerial" onclick="filterGallery('aerial')">Aerial & Drone</button>
+  <button class="filter-btn" data-filter="architecture" onclick="filterGallery('architecture')">Architecture</button>
+  <button class="filter-btn" data-filter="event" onclick="filterGallery('event')">Events</button>
+  <button class="filter-btn" data-filter="portrait" onclick="filterGallery('portrait')">Portrait</button>
+  <span class="filter-count" id="filterCount">24 photos</span>
+</div>
+
+<div class="gallery-wrap" id="galleryWrap">
+
+  <div class="photo-card reveal" data-cat="landscape" onclick="openLightbox(0)">
+    <div class="photo-placeholder-gal" style="height:380px">
+      <img class="gallery-img" src="img/DSC05756@521171327.jpg" alt="Sunset Glow">
+      <span class="ph-num">01</span>
+      <span class="ph-label">Landscape Nature</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Landscape Nature</div><div class="card-title">Sunset Glow</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="landscape" onclick="openLightbox(1)">
+    <div class="photo-placeholder-gal" style="height:300px">
+      <img class="gallery-img" src="img/mountain1.jpg" alt="Mountain Peaks">
+      <span class="ph-num">02</span>
+      <span class="ph-label">Landscape Nature</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Landscape Nature</div><div class="card-title">Mountain Peaks</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="wedding" onclick="openLightbox(2)">
+    <div class="photo-placeholder-gal" style="height:460px">
+      <img class="gallery-img" src="img/DSC02269 (1)@1025181308.jpg" alt="The Vow">
+      <span class="ph-num">03</span>
+      <span class="ph-label">Wedding</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Wedding</div><div class="card-title">The Vow</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="event" onclick="openLightbox(3)">
+    <div class="photo-placeholder-gal" style="height:320px">
+      <img class="gallery-img" src="img/debut4.jpg" alt="Debut Celebration">
+      <span class="ph-num">04</span>
+      <span class="ph-label">Event</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Event</div><div class="card-title">Debut Celebration</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="street" onclick="openLightbox(4)">
+    <div class="photo-placeholder-gal" style="height:400px">
+      <img class="gallery-img" src="img/street.jpg" alt="Urban Pulse">
+      <span class="ph-num">05</span>
+      <span class="ph-label">Street</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Street</div><div class="card-title">Urban Pulse</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="astro" onclick="openLightbox(5)">
+    <div class="photo-placeholder-gal" style="height:280px">
+      <img class="gallery-img" src="img/majestic-night-sky-full-stars.jpg" alt="Majestic Night Sky">
+      <span class="ph-num">06</span>
+      <span class="ph-label">Astro</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Astro</div><div class="card-title">Majestic Night Sky</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="architecture" onclick="openLightbox(6)">
+    <div class="photo-placeholder-gal" style="height:440px">
+      <img class="gallery-img" src="img/church.jpg" alt="Church Facade">
+      <span class="ph-num">07</span>
+      <span class="ph-label">Architecture</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Architecture</div><div class="card-title">Church Facade</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="aerial" onclick="openLightbox(7)">
+    <div class="photo-placeholder-gal" style="height:300px">
+      <img class="gallery-img" src="img/drone.jpg" alt="Drone View">
+      <span class="ph-num">08</span>
+      <span class="ph-label">Aerial & Drone</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Aerial & Drone</div><div class="card-title">Drone View</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="landscape" onclick="openLightbox(8)">
+    <div class="photo-placeholder-gal" style="height:360px">
+      <img class="gallery-img" src="img/sunset2.jpg" alt="Evening Horizon">
+      <span class="ph-num">09</span>
+      <span class="ph-label">Landscape Nature</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Landscape Nature</div><div class="card-title">Evening Horizon</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="landscape" onclick="openLightbox(9)">
+    <div class="photo-placeholder-gal" style="height:320px">
+      <img class="gallery-img" src="img/sunset3.jpg" alt="Golden Dusk">
+      <span class="ph-num">10</span>
+      <span class="ph-label">Landscape Nature</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Landscape Nature</div><div class="card-title">Golden Dusk</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="landscape" onclick="openLightbox(10)">
+    <div class="photo-placeholder-gal" style="height:500px">
+      <img class="gallery-img" src="img/DSC02779@-352263517.jpg" alt="Twilight Colors">
+      <span class="ph-num">11</span>
+      <span class="ph-label">Landscape Nature</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Landscape Nature</div><div class="card-title">Hills</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="architecture" onclick="openLightbox(11)">
+    <div class="photo-placeholder-gal" style="height:340px">
+      <img class="gallery-img" src="img/structure1.jpg" alt="Structural Lines">
+      <span class="ph-num">12</span>
+      <span class="ph-label">Architecture</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Architecture</div><div class="card-title">Structural Lines</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="aerial" onclick="openLightbox(12)">
+    <div class="photo-placeholder-gal" style="height:380px">
+      <img class="gallery-img" src="img/DJI_0718@-953017142.jpg" alt="Island Top-Down">
+      <span class="ph-num">13</span>
+      <span class="ph-label">Aerial & Drone</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Aerial & Drone</div><div class="card-title">Island Top-Down</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="portrait" onclick="openLightbox(13)">
+    <div class="photo-placeholder-gal" style="height:300px">
+      <img class="gallery-img" src="img/DSC03102.jpg" alt="Classic Portrait">
+      <span class="ph-num">14</span>
+      <span class="ph-label">Portrait</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Portrait</div><div class="card-title">Classic Portrait</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="event" onclick="openLightbox(14)">
+    <div class="photo-placeholder-gal" style="height:420px">
+      <img class="gallery-img" src="img/DSC02881.jpg" alt="Pageant">
+      <span class="ph-num">15</span>
+      <span class="ph-label">Event</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Event</div><div class="card-title">Pageant</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="concert" onclick="openLightbox(15)">
+    <div class="photo-placeholder-gal" style="height:350px">
+      <img class="gallery-img" src="img/ZRO01830@948210653.jpg" alt="Live Concert">
+      <span class="ph-num">16</span>
+      <span class="ph-label">Concert</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Concert</div><div class="card-title">Live Concert</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="landscape" onclick="openLightbox(16)">
+    <div class="photo-placeholder-gal" style="height:290px">
+      <img class="gallery-img" src="img/DSC09567@1451990681.jpg" alt="Hills">
+      <span class="ph-num">17</span>
+      <span class="ph-label">Landscape Nature</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Landscape Nature</div><div class="card-title">Hills</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="commercial" onclick="openLightbox(17)">
+    <div class="photo-placeholder-gal" style="height:460px">
+      <img class="gallery-img" src="img/DSC06524@-1389906270.jpg" alt="French Fries">
+      <span class="ph-num">18</span>
+      <span class="ph-label">Commercial</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Commercial</div><div class="card-title">Pizza</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="aerial" onclick="openLightbox(18)">
+    <div class="photo-placeholder-gal" style="height:310px">
+      <img class="gallery-img" src="img/plane.jpg" alt="Airplane in the Sky">
+      <span class="ph-num">19</span>
+      <span class="ph-label">Airplane</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Aerial & Drone</div><div class="card-title">Airplane in the Sky</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="event" onclick="openLightbox(19)">
+    <div class="photo-placeholder-gal" style="height:390px">
+      <img class="gallery-img" src="img/FB_IMG_1774791041199.jpg" alt="Catholic Holy Week">
+      <span class="ph-num">20</span>
+      <span class="ph-label">Event</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Event</div><div class="card-title">Catholic Holy Week</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="landscape" onclick="openLightbox(20)">
+    <div class="photo-placeholder-gal" style="height:330px">
+      <img class="gallery-img" src="img/DSC05756@521171327.jpg" alt="Hidden Valley">
+      <span class="ph-num">21</span>
+      <span class="ph-label">Landscape Nature</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Landscape Nature</div><div class="card-title">Hidden Valley</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="street" onclick="openLightbox(21)">
+    <div class="photo-placeholder-gal" style="height:360px">
+      <img class="gallery-img" src="img/DSC07902@1339992224.jpg" alt="Slow Shutter">
+      <span class="ph-num">22</span>
+      <span class="ph-label">Street</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Street</div><div class="card-title">Slow Shutter</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="portrait" onclick="openLightbox(22)">
+    <div class="photo-placeholder-gal" style="height:340px">
+      <img class="gallery-img" src="img/DSC09043@1248487186.jpg" alt="Milky Way">
+      <span class="ph-num">23</span>
+      <span class="ph-label">Landscape</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Astro</div><div class="card-title">Fisherman</div><div class="card-location">Philippines</div></div>
+  </div>
+
+  <div class="photo-card reveal" data-cat="event" onclick="openLightbox(23)">
+    <div class="photo-placeholder-gal" style="height:400px">
+      <img class="gallery-img" src="img/DSC_0545.jpg" alt="Debut Dreamy Style">
+      <span class="ph-num">24</span>
+      <span class="ph-label">Event</span>
+    </div>
+    <div class="card-overlay"><div class="card-cat">Event</div><div class="card-title">Debut Dreamy Style</div><div class="card-location">Philippines</div></div>
+  </div>
+
+</div><div id="lightbox">
+  <div class="lb-inner">
+    <div class="lb-close" onclick="closeLightbox()">
+      <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </div>
+    <div class="lb-nav lb-prev" onclick="lbNav(-1)">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    </div>
+    <div class="lb-nav lb-next" onclick="lbNav(1)">
+      <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+    
+    <img id="lb-img" src="" alt="Lightbox View">
+
+    <div class="lb-info">
+      <div>
+        <div class="lb-cat" id="lbCat">Category</div>
+        <div class="lb-title" id="lbTitle">Photo Title</div>
+        <div style="font-size:12px;color:var(--ash);margin-top:4px" id="lbLoc">Location</div>
+      </div>
+      <div class="lb-counter" id="lbCounter">1 / 24</div>
+    </div>
+  </div>
+</div>
+
+<footer class="gal-footer">
+  <p>&copy; 2026 Dave Torralba. All Rights Reserved.</p>
+  <div class="footer-logo"><span>D</span>T</div>
+  <p style="text-align:right">Central Visayas, Philippines</p>
+</footer>
+
+<script>
+/* ── Cursor ── */
+const $cursor=document.getElementById('cursor'),$cRing=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function raf(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;$cursor.style.left=mx+'px';$cursor.style.top=my+'px';$cRing.style.left=rx+'px';$cRing.style.top=ry+'px';requestAnimationFrame(raf)})();
+document.querySelectorAll('a,button,.photo-card').forEach(el=>{
+  el.addEventListener('mouseenter',()=>$cRing.classList.add('expanded'));
+  el.addEventListener('mouseleave',()=>$cRing.classList.remove('expanded'));
+});
+
+/* ── Page loader ── */
+const $loaderBar=document.getElementById('loaderBar');
+const $loader=document.getElementById('page-loader');
+let prog=0;
+const loadInterval=setInterval(()=>{
+  prog+=Math.random()*18+6;
+  if(prog>=100){prog=100;clearInterval(loadInterval);setTimeout(()=>$loader.classList.add('hide'),300);}
+  $loaderBar.style.width=prog+'%';
+},80);
+
+/* ── Nav scroll ── */
+const $nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>$nav.classList.toggle('scrolled',window.scrollY>80));
+
+/* ── Reveal on scroll ── */
+document.querySelectorAll('.reveal').forEach(el=>{
+  new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')});
+  },{threshold:.06}).observe(el);
+});
+
+/* ── Gallery data (matches card order) ── */
+const photos=[
+  {cat:'Landscape Nature',title:'Sunset Glow',loc:'Philippines', src:'img/sunset1.jpg'},
+  {cat:'Landscape Nature',title:'Mountain Peaks',loc:'Philippines', src:'img/mountain1.jpg'},
+  {cat:'Wedding',title:'The Vow',loc:'Philippines', src:'img/wedding.jpg'},
+  {cat:'Event',title:'Debut Celebration',loc:'Philippines', src:'img/debut4.jpg'},
+  {cat:'Street',title:'Urban Pulse',loc:'Philippines', src:'img/street.jpg'},
+  {cat:'Astro',title:'Majestic Night Sky',loc:'Philippines', src:'img/majestic-night-sky-full-stars.jpg'},
+  {cat:'Architecture',title:'Church Facade',loc:'Philippines', src:'img/church.jpg'},
+  {cat:'Aerial & Drone',title:'Drone View',loc:'Philippines', src:'img/drone.jpg'},
+  {cat:'Landscape Nature',title:'Evening Horizon',loc:'Philippines', src:'img/sunset2.jpg'},
+  {cat:'Landscape Nature',title:'Golden Dusk',loc:'Philippines', src:'img/sunset3.jpg'},
+  {cat:'Landscape Nature',title:'Twilight Colors',loc:'Philippines', src:'img/sunset4.jpg'},
+  {cat:'Architecture',title:'Structural Lines',loc:'Philippines', src:'img/structure1.jpg'},
+  {cat:'Aerial & Drone',title:'Island Top-Down',loc:'Philippines', src:'img/DJI_0718@-953017142.jpg'},
+  {cat:'Portrait',title:'Classic Portrait',loc:'Philippines', src:'img/DSC03102.jpg'},
+  {cat:'Event',title:'Pageant',loc:'Philippines', src:'img/DSC02881.jpg'},
+  {cat:'Concert',title:'Live Concert',loc:'Philippines', src:'img/ZRO01830@948210653.jpg'},
+  {cat:'Landscape Nature',title:'Hills',loc:'Philippines', src:'img/DSC09567@1451990681.jpg'},
+  {cat:'Commercial',title:'French Fries',loc:'Philippines', src:'img/DSC00517@-1491546201.jpg'},
+  {cat:'Aerial & Drone',title:'Airplane in the Sky',loc:'Philippines', src:'img/DSC00651@-495067042.jpg'},
+  {cat:'Event',title:'Catholic Holy Week',loc:'Philippines', src:'img/FB_IMG_1774791041199.jpg'},
+  {cat:'Landscape Nature',title:'Hidden Valley',loc:'Philippines', src:'img/DSC05756@521171327.jpg'},
+  {cat:'Street',title:'Slow Shutter',loc:'Philippines', src:'img/DSC07902@1339992224.jpg'},
+  {cat:'Astro',title:'Milky Way',loc:'Philippines', src:'img/DSC09043@1248487186.jpg'},
+  {cat:'Event',title:'Debut Dreamy Style',loc:'Philippines', src:'img/DSC_0545.jpg'}
+];
+
+/* ── Filter ── */
+let activeFilter='all';
+function filterGallery(cat){
+  activeFilter=cat;
+  document.querySelectorAll('.filter-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.filter===cat);
+  });
+  const cards=document.querySelectorAll('.photo-card');
+  let shown=0;
+  cards.forEach(c=>{
+    const match=cat==='all'||c.dataset.cat===cat;
+    c.classList.toggle('hidden',!match);
+    if(match)shown++;
+  });
+  document.getElementById('filterCount').textContent=shown+' photo'+(shown===1?'':'s');
+}
+
+/* ── Lightbox ── */
+let lbIndex=0;
+const $lb=document.getElementById('lightbox');
+const $lbImg=document.getElementById('lb-img');
+
+function getVisibleIndices(){
+  return [...document.querySelectorAll('.photo-card:not(.hidden)')].map(c=>{
+    const cards=[...document.querySelectorAll('.photo-card')];
+    return cards.indexOf(c);
+  });
+}
+
+function openLightbox(idx){
+  lbIndex=idx;
+  showLb();
+  $lb.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeLightbox(){
+  $lb.classList.remove('open');
+  document.body.style.overflow='';
+}
+function showLb(){
+  const p=photos[lbIndex];
+  document.getElementById('lbCat').textContent=p.cat;
+  document.getElementById('lbTitle').textContent=p.title;
+  document.getElementById('lbLoc').textContent=p.loc;
+  
+  $lbImg.src = p.src;
+  $lbImg.style.display = 'block';
+
+  const vis=getVisibleIndices();
+  const pos=vis.indexOf(lbIndex);
+  document.getElementById('lbCounter').textContent=`${pos+1} / ${vis.length}`;
+}
+function lbNav(dir){
+  const vis=getVisibleIndices();
+  let pos=vis.indexOf(lbIndex);
+  pos=(pos+dir+vis.length)%vis.length;
+  lbIndex=vis[pos];
+  showLb();
+}
+
+// Keyboard nav
+document.addEventListener('keydown',e=>{
+  if(!$lb.classList.contains('open'))return;
+  if(e.key==='Escape')closeLightbox();
+  if(e.key==='ArrowRight')lbNav(1);
+  if(e.key==='ArrowLeft')lbNav(-1);
+});
+$lb.addEventListener('click',e=>{if(e.target===$lb)closeLightbox()});
+</script>
+</body>
+</html>
